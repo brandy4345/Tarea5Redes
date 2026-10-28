@@ -31,4 +31,12 @@ def create_packet(parsed_IP_packet):
     temp2 = parsed_IP_packet["PORT"]
     port = temp2.to_bytes(2,byteorder="big")
     data = parsed_IP_packet["DATA"].encode()
-    return ip+port+data
+    return ip+port+datadef send_message(IP_router_final, puerto_router_final,message,IP_envío, puerto_envío):
+    packet_msg = create_packet({
+        "IP": IP_router_final,
+        "PORT": int(puerto_router_final),
+        "DATA": message
+    })
+    s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    s.sendto(packet_msg,(IP_envío,int(puerto_envío)))
+    s.close()
