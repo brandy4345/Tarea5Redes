@@ -21,3 +21,14 @@ def parse_packet(IP_packet: bytes):
 
     }
     return dict
+def create_packet(parsed_IP_packet):
+    temp = parsed_IP_packet["IP"].split(".")
+    a = int(temp[0])
+    b = int(temp[1])
+    c = int(temp[2])
+    d = int(temp[3])
+    ip = bytes([a,b,c,d])
+    temp2 = parsed_IP_packet["PORT"]
+    port = temp2.to_bytes(2,byteorder="big")
+    data = parsed_IP_packet["DATA"].encode()
+    return ip+port+data
