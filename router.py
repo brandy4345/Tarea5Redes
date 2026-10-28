@@ -41,3 +41,16 @@ def send_message(IP_router_final, puerto_router_final,message,IP_envío, puerto_
     s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     s.sendto(packet_msg,(IP_envío,int(puerto_envío)))
     s.close()
+def check_routes(routes_file_name: str, destination_address: tuple[str, int])-> tuple[str, int]:
+    ip,port = destination_address
+
+    with open(routes_file_name,"r") as f:
+        file = f.read()
+    lines = file.split("\n")
+    for line in lines:
+        red, port_i,port_f, next_ip,next_port = line.split(" ")
+        #Se asume que todas las masks son de 24 ya que estamos trabajando en la ip local 127.0.0.xxx
+        if red[0:8]== ip[0:8] and port>=int(port_i) and port<=int(port_f):
+            return (next_ip,int(next_port))
+    return None
+
