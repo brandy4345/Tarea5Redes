@@ -47,10 +47,27 @@ def check_routes(routes_file_name: str, destination_address: tuple[str, int])-> 
     with open(routes_file_name,"r") as f:
         file = f.read()
     lines = file.split("\n")
+    candidates = []
     for line in lines:
         red, port_i,port_f, next_ip,next_port = line.split(" ")
         #Se asume que todas las masks son de 24 ya que estamos trabajando en la ip local 127.0.0.xxx
         if red[0:8]== ip[0:8] and port>=int(port_i) and port<=int(port_f):
-            return (next_ip,int(next_port))
-    return None
+            candidates.append((red, int(port_i), int(port_f), next_ip, int(next_port)))
+    if not candidates:        
+        return None
+    next_ip,next_port = round_robin(candidates)
+    return (next_ip, next_port)
+
+def round_robin(candidates):
+    temp = tuple(candidates)
+    key = rutas.get(temp)
+    if not key:
+        rutas[temp] = 0
+        rout = temp[0]
+    else:
+        rout = temp[key]
+    _,_,_,next_ip,next_port = rout
+    actual = rutas[temp]
+    rutas[temp] =(actual+1)%len(temp)
+    return next_ip,next_port
 
