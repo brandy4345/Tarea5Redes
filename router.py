@@ -1,9 +1,9 @@
 import socket
 import sys
 
-IP = "localhost"
-PORT = 8000
 BUFFER_SIZE= 1024
+
+rutas ={}
 
 def parse_packet(IP_packet: bytes):
     a = IP_packet[0]
@@ -12,15 +12,17 @@ def parse_packet(IP_packet: bytes):
     d = IP_packet[3]
     ip = f"{a}.{b}.{c}.{d}"
     port = int.from_bytes(IP_packet[4:6], byteorder="big")
-    data = IP_packet[6:].decode()
+    ttl = IP_packet[6]
+    data = IP_packet[7:].decode()
     dict = {}
     dict = {
         "IP": ip,
         "PORT": port,
+        "TTL": ttl,
         "DATA": data
-
     }
     return dict
+
 def create_packet(parsed_IP_packet):
     temp = parsed_IP_packet["IP"].split(".")
     a = int(temp[0])
@@ -30,16 +32,19 @@ def create_packet(parsed_IP_packet):
     ip = bytes([a,b,c,d])
     temp2 = parsed_IP_packet["PORT"]
     port = temp2.to_bytes(2,byteorder="big")
+    ttl = parsed_IP_packet["TTL"].to_bytes(1,byteorder="big")
     data = parsed_IP_packet["DATA"].encode()
-    return ip+port+data
-def send_message(IP_router_final, puerto_router_final,message,IP_envío, puerto_envío):
+    return ip+port+ttl+data
+
+def send_message(IP_router_final, puerto_router_final,ttl,message,IP_envío, puerto_envío):
     packet_msg = create_packet({
         "IP": IP_router_final,
-        "PORT": int(puerto_router_final),
+        "PORT": puerto_router_final,
+        "TTL": ttl,
         "DATA": message
     })
     s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    s.sendto(packet_msg,(IP_envío,int(puerto_envío)))
+    s.sendto(packet_msg,(IP_envío,puerto_envío))
     s.close()
 def check_routes(routes_file_name: str, destination_address: tuple[str, int])-> tuple[str, int]:
     ip,port = destination_address
@@ -71,3 +76,38 @@ def round_robin(candidates):
     rutas[temp] =(actual+1)%len(temp)
     return next_ip,next_port
 
+def is_for_me(paq,ip,port):
+    paq_ip = paq["IP"]
+    paq_port = paq["PORT"]
+    return paq_ip == ip and paq_port == port
+        
+
+def main():
+    if len(sys.argv)<4:
+        print("error: No hay suficientes argumentos")
+        sys.exit(1)
+    IP = sys.argv[1]
+    PORT = int(sys.argv[2])
+    route = sys.argv[3]
+    address = (IP,PORT)
+    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    sock.bind(address)
+    while True:
+        data, _ = sock.recvfrom(BUFFER_SIZE)
+        pars_data = parse_packet(data)
+        if pars_data["TTL"]>0:
+            a = is_for_me(pars_data,IP,PORT)
+            if a:
+                print(pars_data["DATA"])
+            else:
+                next_hop = check_routes(route,(pars_data["IP"],pars_data["PORT"]))
+                if next_hop:
+                    print(f"redirigiendo paquete {pars_data} con destino final {pars_data['IP']}:{pars_data['PORT']} desde {IP}:{PORT} hacia {next_hop[0]}:{next_hop[1]}")
+                    send_message(pars_data["IP"],pars_data["PORT"],pars_data["TTL"]-1,pars_data["DATA"],next_hop[0],next_hop[1])
+                else:
+                    print(f"No hay rutas hacia {pars_data['IP']}:{pars_data['PORT']} para paquete {pars_data}")
+        else:
+            print(f"Se recibio paquete {pars_data} con TTL 0")
+
+if __name__=="__main__":
+    main()
