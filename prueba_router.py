@@ -38,7 +38,6 @@ def main():
             "DATA": line,
         }
         packet = create_packet(pack_dict)
-        print(pack_dict)
         sock.sendto(packet, router_addr)
 
 
