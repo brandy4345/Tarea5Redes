@@ -66,11 +66,10 @@ def check_routes(routes_file_name: str, destination_address: tuple[str, int])-> 
 def round_robin(candidates):
     temp = tuple(candidates)
     key = rutas.get(temp)
-    if not key:
+    if key is None:
         rutas[temp] = 0
-        rout = temp[0]
-    else:
-        rout = temp[key]
+        key = 0
+    rout = temp[key]
     _,_,_,next_ip,next_port = rout
     actual = rutas[temp]
     rutas[temp] =(actual+1)%len(temp)
